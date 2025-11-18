@@ -2,20 +2,19 @@ package model;
 
 public class SavingsAccount extends Account implements InterestBearing {
 
-    private static final double INTEREST_RATE = 0.0005; // 0.05%
+    private static final double INTEREST_RATE = 0.0005;
 
-    public SavingsAccount(String accountNumber, String branch, Customer customer) {
-        super(accountNumber, branch, customer);
+    public SavingsAccount(int customerId, String accountNumber, String branch) {
+        super(customerId, accountNumber, branch, "SavingsAccount");
     }
 
     @Override
     public void withdraw(double amount) {
-        throw new UnsupportedOperationException("Withdrawals are not allowed from Savings Accounts.");
+        throw new RuntimeException("Withdrawals not allowed from Savings Accounts.");
     }
 
     @Override
     public void applyInterest() {
-        double newBalance = getBalance() * (1 + INTEREST_RATE);
-        setBalance(newBalance);
+        balance += (balance * INTEREST_RATE);
     }
 }

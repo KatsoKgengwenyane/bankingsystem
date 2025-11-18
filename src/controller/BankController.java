@@ -1,75 +1,89 @@
 package controller;
 
+import database.AccountDAO;
+import database.CustomerDAO;
+import database.TransactionDAO;
 import model.*;
-import view.MainView;
+
+import java.util.List;
 
 public class BankController {
 
-    private Bank bank;
-    private MainView view;
+    private final CustomerDAO customerDAO = new CustomerDAO();
+    private final AccountDAO accountDAO = new AccountDAO();
+    private final TransactionDAO transactionDAO = new TransactionDAO();
 
-    public BankController(Bank bank, MainView view) {
-        this.bank = bank;
-        this.view = view;
+    public BankController() {}
+
+
+    // ============================================================
+    // LOAD CUSTOMER + ACCOUNTS
+    // ============================================================
+    public Customer loadCustomer(String fullName) {
+        Customer c = customerDAO.findByFullName(fullName);
+        if (c == null) return null;
+
+        List<Account> accounts = accountDAO.findByCustomer(c.getId());
+        for (Account a : accounts) {
+            c.addAccount(a);
+        }
+
+        return c;
     }
 
-    // Helper to convert GUI names to class names
-    private String mapAccountType(String guiType) {
-        switch (guiType) {
-            case "Savings Account":
-                return "SavingsAccount";
-            case "Investment Account":
-                return "InvestmentAccount";
-            case "Cheque Account":
-                return "ChequeAccount";
-            default:
-                return null;
-        }
+
+    // ============================================================
+    // DEPOSIT
+    // ============================================================
+    public String deposit(String fullName, String accountType, double amount) {
+        Customer c = loadCustomer(fullName);
+        if (c == null) return "❌ Customer not found.";
+
+        Account acc = findAccount(c, accountType);
+        if (acc == null) return "❌ Account not found.";
+
+        acc.deposit(amount);
+        accountDAO.updateBalance(acc.getAccountNumber(), acc.getBalance());
+        transactionDAO.insert(acc.getId(), "DEPOSIT", amount);
+
+        return "✅ Deposit successful. New balance: " + acc.getBalance();
     }
 
-    public String handleDeposit(String customerName, String accountType, double amount) {
-        if (customerName.isEmpty() || accountType == null) {
-            return "⚠️ Please enter customer name and select an account type.";
-        }
 
-        Customer customer = bank.findCustomerByName(customerName);
-        if (customer == null) {
-            return "❌ Customer not found.";
-        }
+    // ============================================================
+    // WITHDRAW
+    // ============================================================
+    public String withdraw(String fullName, String accountType, double amount) {
+        Customer c = loadCustomer(fullName);
+        if (c == null) return "❌ Customer not found.";
 
-        String type = mapAccountType(accountType);
-        Account account = bank.findAccountByType(customer, type);
-        if (account == null) {
-            return "❌ Customer does not have a " + accountType + ".";
-        }
-
-        account.deposit(amount);
-        return "✅ Deposit successful: " + amount + "\nNew balance: " + account.getBalance();
-    }
-
-    public String handleWithdraw(String customerName, String accountType, double amount) {
-        if (customerName.isEmpty() || accountType == null) {
-            return "⚠️ Please enter customer name and select an account type.";
-        }
-
-        Customer customer = bank.findCustomerByName(customerName);
-        if (customer == null) {
-            return "❌ Customer not found.";
-        }
-
-        String type = mapAccountType(accountType);
-        Account account = bank.findAccountByType(customer, type);
-        if (account == null) {
-            return "❌ Customer does not have a " + accountType + ".";
-        }
+        Account acc = findAccount(c, accountType);
+        if (acc == null) return "❌ Account not found.";
 
         try {
-            account.withdraw(amount);
-        } catch (UnsupportedOperationException ex) {
-            return "❌ " + ex.getMessage();
+            acc.withdraw(amount);
+        } catch (Exception e) {
+            return "❌ " + e.getMessage();
         }
 
-        return "💸 Withdrawal successful: " + amount + "\nNew balance: " + account.getBalance();
+        accountDAO.updateBalance(acc.getAccountNumber(), acc.getBalance());
+        transactionDAO.insert(acc.getId(), "WITHDRAW", amount);
+
+        return "💸 Withdrawal successful. New balance: " + acc.getBalance();
+    }
+
+
+    // ============================================================
+    // HELPER: FIND ACCOUNT BY TYPE
+    // ============================================================
+    private Account findAccount(Customer c, String accountType) {
+        String normalized = accountType.replace(" ", "").toLowerCase();
+
+        for (Account a : c.getAccounts()) {
+            if (a.getType().toLowerCase().equals(normalized)) {
+                return a;
+            }
+        }
+        return null;
     }
 }
-

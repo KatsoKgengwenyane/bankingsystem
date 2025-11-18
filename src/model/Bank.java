@@ -4,46 +4,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Bank {
-    private List<Customer> customers;
+    private List<Customer> customers = new ArrayList<>();
 
-    public Bank() {
-        this.customers = new ArrayList<>();
-    }
+    public void addCustomer(Customer c) { customers.add(c); }
 
-    public void addCustomer(Customer customer) {
-        customers.add(customer);
-    }
+    public List<Customer> getCustomers() { return customers; }
 
-    public List<Customer> getCustomers() {
-        return customers;
-    }
-
-    public void displayAllCustomers() {
+    public Customer findCustomerByName(String fullName) {
         for (Customer c : customers) {
-            System.out.println(c);
-            for (Account acc : c.getAccounts()) {
-                System.out.println("   " + acc);
+            if (c.getFullName().equalsIgnoreCase(fullName)) {
+                return c;
             }
         }
+        return null;
     }
 
-
-public Customer findCustomerByName(String fullName) {
-    for (Customer c : customers) {
-        String name = c.getFirstName() + " " + c.getSurname();
-        if (name.equalsIgnoreCase(fullName.trim())) {
-            return c;
+    public Account findAccountByType(Customer c, String typeName) {
+        for (Account a : c.getAccounts()) {
+            if (a.getType().equalsIgnoreCase(typeName.replace(" ", ""))) {
+                return a;
+            }
         }
+        return null;
     }
-    return null;
-}
-
-public Account findAccountByType(Customer customer, String accountType) {
-    for (Account a : customer.getAccounts()) {
-        if (a.getClass().getSimpleName().equalsIgnoreCase(accountType.replace(" ", ""))) {
-            return a;
-        }
-    }
-    return null;
-}
 }

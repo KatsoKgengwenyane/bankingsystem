@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Main",
+      "request": "launch",
+      "mainClass": "Main",
+      "projectName": "bankingsystem_f5b4154f"
+    },
+    {
+      "type": "java",
+      "name": "Run MainView",
+      "request": "launch",
+      "mainClass": "view.MainView",
+      "vmArgs": "--module-path \"C:/javafx-sdk-25/lib\" --add-modules javafx.controls"
+    }
+  ]
+}

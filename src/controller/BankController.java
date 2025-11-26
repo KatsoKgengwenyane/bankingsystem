@@ -15,12 +15,15 @@ public class BankController {
 
     public BankController() {}
 
-
     // ============================================================
-    // LOAD CUSTOMER + ACCOUNTS
+    // LOAD CUSTOMER + THEIR ACCOUNTS
     // ============================================================
     public Customer loadCustomer(String fullName) {
-        Customer c = customerDAO.findByFullName(fullName);
+
+        if (fullName == null || fullName.trim().isEmpty())
+            return null;
+
+        Customer c = customerDAO.findByFullName(fullName.trim());
         if (c == null) return null;
 
         List<Account> accounts = accountDAO.findByCustomer(c.getId());
@@ -31,53 +34,86 @@ public class BankController {
         return c;
     }
 
-
     // ============================================================
     // DEPOSIT
     // ============================================================
     public String deposit(String fullName, String accountType, double amount) {
-        Customer c = loadCustomer(fullName);
+
+        // Validate input
+        if (fullName == null || fullName.isBlank())
+            return "⚠ Please enter customer name.";
+
+        if (accountType == null)
+            return "⚠ Please choose an account type.";
+
+        if (amount <= 0)
+            return "⚠ Deposit amount must be greater than zero.";
+
+        // Load customer
+        Customer c = loadCustomer(fullName.trim());
         if (c == null) return "❌ Customer not found.";
 
+        // Find account
         Account acc = findAccount(c, accountType);
-        if (acc == null) return "❌ Account not found.";
+        if (acc == null) return "❌ Account not found for this customer.";
 
-        acc.deposit(amount);
+        // Apply deposit
+        try {
+            acc.deposit(amount);
+        } catch (Exception e) {
+            return "❌ " + e.getMessage();
+        }
+
+        // Persist changes
         accountDAO.updateBalance(acc.getAccountNumber(), acc.getBalance());
         transactionDAO.insert(acc.getId(), "DEPOSIT", amount);
 
         return "✅ Deposit successful. New balance: " + acc.getBalance();
     }
 
-
     // ============================================================
     // WITHDRAW
     // ============================================================
     public String withdraw(String fullName, String accountType, double amount) {
-        Customer c = loadCustomer(fullName);
+
+        // Validate input
+        if (fullName == null || fullName.isBlank())
+            return "⚠ Please enter customer name.";
+
+        if (accountType == null)
+            return "⚠ Please choose an account type.";
+
+        if (amount <= 0)
+            return "⚠ Withdrawal amount must be greater than zero.";
+
+        // Load customer
+        Customer c = loadCustomer(fullName.trim());
         if (c == null) return "❌ Customer not found.";
 
+        // Find account
         Account acc = findAccount(c, accountType);
-        if (acc == null) return "❌ Account not found.";
+        if (acc == null) return "❌ Account not found for this customer.";
 
+        // Attempt withdrawal
         try {
             acc.withdraw(amount);
         } catch (Exception e) {
             return "❌ " + e.getMessage();
         }
 
+        // Persist changes
         accountDAO.updateBalance(acc.getAccountNumber(), acc.getBalance());
         transactionDAO.insert(acc.getId(), "WITHDRAW", amount);
 
         return "💸 Withdrawal successful. New balance: " + acc.getBalance();
     }
 
-
     // ============================================================
-    // HELPER: FIND ACCOUNT BY TYPE
+    // HELPER: FIND ACCOUNT BY TYPE (Robust and safe)
     // ============================================================
     private Account findAccount(Customer c, String accountType) {
-        String normalized = accountType.replace(" ", "").toLowerCase();
+
+        String normalized = accountType.replace(" ", "").trim().toLowerCase();
 
         for (Account a : c.getAccounts()) {
             if (a.getType().toLowerCase().equals(normalized)) {

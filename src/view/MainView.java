@@ -1,6 +1,7 @@
 package view;
 
 import controller.BankController;
+import database.SampleData;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -21,7 +22,6 @@ public class MainView extends Application {
 
         // Colors
         String bacBlue = "#0A1E59";
-        String bacGold = "#F2C14E";
         String bg = "#F7F8FA";
 
         // Title
@@ -135,6 +135,7 @@ public class MainView extends Application {
     }
 
     public static void main(String[] args) {
-        launch();
-    }
+    SampleData.load();
+    launch(args);
+}
 }

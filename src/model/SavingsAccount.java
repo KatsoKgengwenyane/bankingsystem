@@ -7,6 +7,10 @@ public class SavingsAccount extends Account implements InterestBearing {
     public SavingsAccount(int customerId, String accountNumber, String branch) {
         super(customerId, accountNumber, branch, "SavingsAccount");
     }
+ 
+    public SavingsAccount(int id, int customerId, String accountNumber, String branch, double balance) {
+    super(id, customerId, accountNumber, branch, "SavingsAccount", balance);
+}
 
     @Override
     public void withdraw(double amount) {

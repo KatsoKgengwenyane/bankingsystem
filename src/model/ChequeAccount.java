@@ -5,6 +5,10 @@ public class ChequeAccount extends Account {
     public ChequeAccount(int customerId, String accountNumber, String branch) {
         super(customerId, accountNumber, branch, "ChequeAccount");
     }
+    
+   public ChequeAccount(int id, int customerId, String accountNumber, String branch, double balance) {
+    super(id, customerId, accountNumber, branch, "ChequeAccount", balance);
+}
 
     @Override
     public void withdraw(double amount) {

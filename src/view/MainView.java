@@ -16,6 +16,10 @@ public class MainView extends Application {
 
     private final BankController controller = new BankController();
 
+    private Label lblBalance;
+    private TextField txtName;
+    private ComboBox<String> cmbType;
+
     @Override
     public void start(Stage stage) {
         stage.setTitle("🏦 BAC Banking System");
@@ -30,16 +34,16 @@ public class MainView extends Application {
 
         // Inputs
         Label lblName = new Label("Customer Name:");
-        TextField txtName = new TextField();
+        txtName = new TextField();
 
         Label lblAccType = new Label("Account Type:");
-        ComboBox<String> cmbType = new ComboBox<>();
+        cmbType = new ComboBox<>();
         cmbType.getItems().addAll("SavingsAccount", "InvestmentAccount", "ChequeAccount");
 
         Label lblAmount = new Label("Amount:");
         TextField txtAmount = new TextField();
 
-        Label lblBalance = new Label("Balance: -");
+        lblBalance = new Label("Balance: -");
         lblBalance.setStyle("-fx-font-weight: bold; -fx-text-fill: darkgreen;");
 
         // Buttons
@@ -90,32 +94,38 @@ public class MainView extends Application {
 
         // DEPOSIT
         btnDeposit.setOnAction(e -> {
+            String name = txtName.getText().trim();
+            String type = cmbType.getValue();
+
+            double amount;
             try {
-                String name = txtName.getText().trim();
-                String type = cmbType.getValue();
-                double amount = Double.parseDouble(txtAmount.getText());
-
-                String result = controller.deposit(name, type, amount);
-                txtFeedback.setText(result);
-
+                amount = Double.parseDouble(txtAmount.getText());
             } catch (Exception ex) {
                 txtFeedback.setText("⚠ Enter valid amount.");
+                return;
             }
+
+            String result = controller.deposit(name, type, amount);
+            txtFeedback.setText(result);
+            refreshBalance();
         });
 
         // WITHDRAW
         btnWithdraw.setOnAction(e -> {
+            String name = txtName.getText().trim();
+            String type = cmbType.getValue();
+
+            double amount;
             try {
-                String name = txtName.getText().trim();
-                String type = cmbType.getValue();
-                double amount = Double.parseDouble(txtAmount.getText());
-
-                String result = controller.withdraw(name, type, amount);
-                txtFeedback.setText(result);
-
+                amount = Double.parseDouble(txtAmount.getText());
             } catch (Exception ex) {
                 txtFeedback.setText("⚠ Enter valid amount.");
+                return;
             }
+
+            String result = controller.withdraw(name, type, amount);
+            txtFeedback.setText(result);
+            refreshBalance();
         });
 
         // CLEAR
@@ -130,12 +140,36 @@ public class MainView extends Application {
         // EXIT
         btnExit.setOnAction(e -> System.exit(0));
 
+        // Auto-refresh balance when typing name or choosing account type
+        txtName.setOnKeyReleased(e -> refreshBalance());
+        cmbType.setOnAction(e -> refreshBalance());
+
         stage.setScene(new Scene(layout, 540, 520));
         stage.show();
     }
 
+    // ======================================================
+    // REFRESH BALANCE
+    // ======================================================
+    private void refreshBalance() {
+        String name = txtName.getText().trim();
+        String type = cmbType.getValue();
+
+        if (name.isEmpty() || type == null) {
+            lblBalance.setText("Balance: -");
+            return;
+        }
+
+        Double bal = controller.getBalance(name, type);
+        if (bal == null) {
+            lblBalance.setText("Balance: -");
+        } else {
+            lblBalance.setText("Balance: " + bal);
+        }
+    }
+
     public static void main(String[] args) {
-    SampleData.load();
-    launch(args);
-}
+        SampleData.load();
+        launch(args);
+    }
 }

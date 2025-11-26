@@ -108,6 +108,16 @@ public class BankController {
         return "💸 Withdrawal successful. New balance: " + acc.getBalance();
     }
 
+    public Double getBalance(String fullName, String accountType) {
+    Customer c = loadCustomer(fullName);
+    if (c == null) return null;
+
+    Account acc = findAccount(c, accountType);
+    if (acc == null) return null;
+
+    return acc.getBalance();
+}
+
     // ============================================================
     // HELPER: FIND ACCOUNT BY TYPE (Robust and safe)
     // ============================================================

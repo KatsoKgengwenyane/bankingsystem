@@ -8,8 +8,17 @@ import java.util.List;
 
 public class CustomerDAO {
 
-    public int insertCustomer(Customer c) {
-        String sql = "INSERT INTO customers(first_name, surname, address) VALUES (?, ?, ?)";
+    // ------------------------------------------------------------
+    // INSERT CUSTOMER
+    // ------------------------------------------------------------
+    public int insert(Customer c) throws Exception {
+
+        String sql = """
+            INSERT INTO customers
+            (first_name, surname, address, cellphone, employer,
+             company_name, company_address, is_company)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """;
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -17,24 +26,45 @@ public class CustomerDAO {
             ps.setString(1, c.getFirstName());
             ps.setString(2, c.getSurname());
             ps.setString(3, c.getAddress());
-            ps.executeUpdate();
+            ps.setString(4, c.getCellphone());
+            ps.setString(5, c.getEmployer());
+            ps.setString(6, c.getCompanyName());
+            ps.setString(7, c.getCompanyAddress());
+            ps.setInt(8, c.isCompany() ? 1 : 0);
 
-            ResultSet rs = ps.getGeneratedKeys();
-            if (rs.next()) return rs.getInt(1);
+            int rows = ps.executeUpdate();
+            if (rows == 0)
+                throw new Exception("Insert failed — no rows affected.");
 
-        } catch (Exception e) { e.printStackTrace(); }
+            ResultSet keys = ps.getGeneratedKeys();
+            if (keys.next()) return keys.getInt(1);
 
-        return -1;
+            throw new Exception("Customer created but no ID returned.");
+
+        } catch (SQLException e) {
+            throw new Exception("DB Insert Error: " + e.getMessage());
+        }
     }
 
+
+    // ------------------------------------------------------------
+    // FIND CUSTOMER BY FULL NAME
+    // ------------------------------------------------------------
     public Customer findByFullName(String fullName) {
-        String[] parts = fullName.split(" ");
-        if (parts.length < 2) return null;
 
-        String first = parts[0];
-        String last = parts[1];
+        if (fullName == null || !fullName.contains(" "))
+            return null;
 
-        String sql = "SELECT * FROM customers WHERE first_name = ? AND surname = ?";
+        String[] parts = fullName.trim().split(" ", 2);
+        String first = parts[0].trim();
+        String last = parts[1].trim();
+
+        String sql = """
+            SELECT *
+            FROM customers
+            WHERE LOWER(first_name) = LOWER(?)
+              AND LOWER(surname)    = LOWER(?)
+        """;
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -43,40 +73,114 @@ public class CustomerDAO {
             ps.setString(2, last);
 
             ResultSet rs = ps.executeQuery();
-
             if (rs.next()) {
-                return new Customer(
-                        rs.getInt("id"),
-                        rs.getString("first_name"),
-                        rs.getString("surname"),
-                        rs.getString("address")
-                );
+                return extractCustomer(rs);
             }
 
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            System.out.println("ERROR in findByFullName: " + e.getMessage());
+        }
 
         return null;
     }
 
-    public List<Customer> findAll() {
+
+    // ------------------------------------------------------------
+    // GET ALL CUSTOMERS
+    // ------------------------------------------------------------
+    public List<Customer> getAll() {
+
         List<Customer> list = new ArrayList<>();
+
         String sql = "SELECT * FROM customers";
 
         try (Connection conn = DBConnection.getConnection();
-             Statement st = conn.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                list.add(new Customer(
-                        rs.getInt("id"),
-                        rs.getString("first_name"),
-                        rs.getString("surname"),
-                        rs.getString("address")
-                ));
+                list.add(extractCustomer(rs));
             }
 
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            System.out.println("ERROR loading customers: " + e.getMessage());
+        }
 
         return list;
+    }
+
+    
+
+    // ------------------------------------------------------------
+    // UPDATE CUSTOMER
+    // ------------------------------------------------------------
+    public void update(Customer c) {
+
+        String sql = """
+            UPDATE customers
+            SET first_name=?, surname=?, address=?, cellphone=?, employer=?,
+                company_name=?, company_address=?, is_company=?
+            WHERE id=?
+        """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, c.getFirstName());
+            ps.setString(2, c.getSurname());
+            ps.setString(3, c.getAddress());
+            ps.setString(4, c.getCellphone());
+            ps.setString(5, c.getEmployer());
+            ps.setString(6, c.getCompanyName());
+            ps.setString(7, c.getCompanyAddress());
+            ps.setInt(8, c.isCompany() ? 1 : 0);
+            ps.setInt(9, c.getId());
+
+            ps.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new RuntimeException("DB Update Error: " + e.getMessage());
+        }
+    }
+
+
+    // ------------------------------------------------------------
+    // DELETE CUSTOMER
+    // ------------------------------------------------------------
+    public void delete(int id) {
+
+        String sql = "DELETE FROM customers WHERE id=?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, id);
+            ps.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new RuntimeException("DB Delete Error: " + e.getMessage());
+        }
+    }
+
+
+    // ------------------------------------------------------------
+    // Convert ResultSet → Customer object
+    // ------------------------------------------------------------
+    private Customer extractCustomer(ResultSet rs) throws SQLException {
+
+        Customer c = new Customer(
+                rs.getInt("id"),
+                rs.getString("first_name"),
+                rs.getString("surname"),
+                rs.getString("address")
+        );
+
+        c.setCellphone(rs.getString("cellphone"));
+        c.setEmployer(rs.getString("employer"));
+        c.setCompanyName(rs.getString("company_name"));
+        c.setCompanyAddress(rs.getString("company_address"));
+        c.setCompany(rs.getInt("is_company") == 1);
+
+        return c;
     }
 }

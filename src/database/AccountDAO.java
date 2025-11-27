@@ -8,40 +8,38 @@ import java.util.List;
 
 public class AccountDAO {
 
-    // =====================================================
-    // INSERT ACCOUNT
-    // =====================================================
-    public int insertAccount(Account account) {
+    // ------------------------------------------------------------
+    // INSERT NEW ACCOUNT
+    // ------------------------------------------------------------
+    public void insert(Account account) {
 
-        String sql = "INSERT INTO accounts(customer_id, account_number, branch, type, balance) " +
-                     "VALUES (?, ?, ?, ?, ?)";
+        String sql = """
+            INSERT INTO accounts (customer_id, account_number, branch, type, balance)
+            VALUES (?, ?, ?, ?, ?)
+        """;
 
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, account.getCustomerId());
             ps.setString(2, account.getAccountNumber());
             ps.setString(3, account.getBranch());
-            ps.setString(4, account.getType());  // MUST MATCH “SavingsAccount”
+            ps.setString(4, account.getType());
             ps.setDouble(5, account.getBalance());
 
             ps.executeUpdate();
 
-            ResultSet rs = ps.getGeneratedKeys();
-            if (rs.next()) return rs.getInt(1);
-
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        return -1;
     }
 
-    // =====================================================
-    // GET ALL ACCOUNTS FOR CUSTOMER
-    // =====================================================
+    // ------------------------------------------------------------
+    // GET ALL ACCOUNTS FOR A CUSTOMER
+    // ------------------------------------------------------------
     public List<Account> findByCustomer(int customerId) {
-        List<Account> list = new ArrayList<>();
+
+        List<Account> accounts = new ArrayList<>();
 
         String sql = "SELECT * FROM accounts WHERE customer_id = ?";
 
@@ -52,62 +50,53 @@ public class AccountDAO {
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-
-                int id = rs.getInt("id");
-                String accNum = rs.getString("account_number");
-                String branch = rs.getString("branch");
-                String type = rs.getString("type");
-                double balance = rs.getDouble("balance");
-
-                Account acc = createAccount(id, customerId, accNum, branch, type, balance);
-                list.add(acc);
+                accounts.add(createAccountFromDB(rs));
             }
 
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        return list;
+        return accounts;
     }
 
-    // =====================================================
-    // RECONSTRUCT ACCOUNT OBJECT FROM DB
-    // =====================================================
-    private Account createAccount(int id,
-                                  int customerId,
-                                  String number,
-                                  String branch,
-                                  String type,
-                                  double balance) {
+    // ------------------------------------------------------------
+    // CREATE PROPER ACCOUNT OBJECT FROM DATABASE ROW
+    // ------------------------------------------------------------
+    private Account createAccountFromDB(ResultSet rs) throws SQLException {
 
-        Account acc;
+        int id = rs.getInt("id");
+        int customerId = rs.getInt("customer_id");
+        String accNum = rs.getString("account_number");
+        String branch = rs.getString("branch");
+        String type = rs.getString("type");
+        double balance = rs.getDouble("balance");
 
-        switch (type) {
+        // Match database type to real object
+        return switch (type) {
+            case "SavingsAccount" -> new SavingsAccount(
+                    id, customerId, accNum, branch, balance
+            );
 
-            case "SavingsAccount":
-                acc = new SavingsAccount(id, customerId, number, branch, balance);
-                break;
+            case "InvestmentAccount" -> new InvestmentAccount(
+                    id, customerId, accNum, branch, balance
+            );
 
-            case "InvestmentAccount":
-                acc = new InvestmentAccount(id, customerId, number, branch, balance);
-                break;
+            case "ChequeAccount" -> new ChequeAccount(
+                    id, customerId, accNum, branch, balance
+            );
 
-            case "ChequeAccount":
-                acc = new ChequeAccount(id, customerId, number, branch, balance);
-                break;
-
-            default:
-                // fallback
-                acc = new SavingsAccount(id, customerId, number, branch, balance);
-        }
-
-        return acc;
+            default -> {
+                System.out.println("⚠ Unknown account type: " + type);
+                yield new SavingsAccount(id, customerId, accNum, branch, balance);
+            }
+        };
     }
 
-    // =====================================================
-    // UPDATE BALANCE
-    // =====================================================
-    public boolean updateBalance(String accountNumber, double newBalance) {
+    // ------------------------------------------------------------
+    // UPDATE BALANCE AFTER DEPOSIT/WITHDRAWAL
+    // ------------------------------------------------------------
+    public void updateBalance(String accountNumber, double newBalance) {
 
         String sql = "UPDATE accounts SET balance = ? WHERE account_number = ?";
 
@@ -116,13 +105,10 @@ public class AccountDAO {
 
             ps.setDouble(1, newBalance);
             ps.setString(2, accountNumber);
-
-            return ps.executeUpdate() > 0;
+            ps.executeUpdate();
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-        return false;
     }
 }

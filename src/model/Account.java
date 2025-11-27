@@ -26,6 +26,7 @@ public abstract class Account {
         this.balance = 0.0;
     }
 
+    
     // COMMON LOGIC
     public void deposit(double amount) {
         balance += amount;
